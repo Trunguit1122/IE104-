@@ -1,0 +1,30 @@
+{
+  "entryFile": "src/server.ts",
+  "noImplicitAdditionalProperties": "throw-on-extras",
+  "controllerPathGlobs": ["src/controllers/**/*.controller.ts"],
+  "spec": {
+    "outputDirectory": "src",
+    "specVersion": 3,
+    "name": "LingoLab API",
+    "description": "LingoLab Backend API - IELTS Practice Platform",
+    "version": "1.0.0",
+    "contact": {
+      "name": "LingoLab"
+    },
+    "securityDefinitions": {
+      "jwt": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT Authorization header using Bearer scheme"
+      }
+    }
+  },
+  "routes": {
+    "routesDir": "src",
+    "routesFileName": "routes.ts",
+    "middleware": "express",
+    "basePath": "",
+    "authenticationModule": "src/middleware/auth.middleware.ts"
+  }
+}
