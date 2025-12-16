@@ -56,12 +56,13 @@ export class PracticeService {
     learnerId: string,
     dto: StartSpeakingPracticeDTO
   ): Promise<PracticeSessionResponseDTO> {
-    // Check if prompt exists and is active
+    // Check if prompt exists
     const prompt = await this.promptRepository.findOne({
-      where: { id: dto.promptId, isActive: true },
+      where: { id: dto.promptId },
     });
 
-    if (!prompt) {
+    // Allow if prompt exists and isActive is not explicitly false
+    if (!prompt || prompt.isActive === false) {
       return {
         success: false,
         message: Messages.MSG_031,
@@ -124,12 +125,13 @@ export class PracticeService {
       };
     }
 
-    // Check if prompt exists and is active
+    // Check if prompt exists
     const prompt = await this.promptRepository.findOne({
-      where: { id: dto.promptId, isActive: true },
+      where: { id: dto.promptId },
     });
 
-    if (!prompt) {
+    // Allow if prompt exists and isActive is not explicitly false
+    if (!prompt || prompt.isActive === false) {
       return {
         success: false,
         message: Messages.MSG_031,
@@ -805,8 +807,9 @@ export class PracticeService {
       };
     }
 
-    // BR63: Check if prompt is still available
-    if (!originalAttempt.prompt?.isActive) {
+    // BR63: Check if prompt is still available (if isActive is explicitly false, reject)
+    // Allow retake if isActive is true or undefined (for backward compatibility)
+    if (originalAttempt.prompt && originalAttempt.prompt.isActive === false) {
       return {
         success: false,
         message: Messages.MSG_031,

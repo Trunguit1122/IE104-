@@ -1,13 +1,70 @@
 # 🚀 LingoLab Backend - Quick Start Guide
 
-## ⚡ Khởi Động Nhanh
+## ⚡ Người Mới - Setup Từ Đầu (Khuyến Khích)
+
+Chạy script tự động để setup mọi thứ (Docker + Database + Seed Data):
 
 ```bash
 cd /home/tung/kcpm/lingolab-backend
-npm start
+
+# Chạy script setup tự động
+./scripts/setup-dev.sh
+```
+
+Script này sẽ:
+1. ✅ Khởi động PostgreSQL trong Docker (port 54321)
+2. ✅ Cài đặt npm dependencies
+3. ✅ Chạy tất cả migrations
+4. ✅ Seed database với dữ liệu demo
+
+Sau đó chạy server:
+```bash
+npm run dev
 ```
 
 Server chạy tại: **http://localhost:3000**
+
+---
+
+## 🐳 Chạy Toàn Bộ Trên Docker
+
+Nếu muốn chạy cả Backend + Database trên Docker:
+
+```bash
+# Build và chạy mọi thứ
+docker-compose up -d
+
+# Xem logs
+docker-compose logs -f backend
+```
+
+---
+
+## 🔧 Setup Thủ Công
+
+Nếu không muốn dùng script tự động:
+
+```bash
+# 1. Sao chép file env
+cp .env.example .env
+
+# 2. Khởi động PostgreSQL
+docker-compose -f docker-compose.dev.yml up -d
+
+# 3. Đợi database sẵn sàng (khoảng 10 giây)
+
+# 4. Cài dependencies
+npm install
+
+# 5. Chạy migrations
+npm run migration:run
+
+# 6. Seed data
+npm run seed
+
+# 7. Chạy server
+npm run dev
+```
 
 ---
 
@@ -75,28 +132,38 @@ curl -X GET "http://localhost:3000/api/practice/prompts" \
 
 ## 📦 Seeded Data
 
-- ✅ **12 Users** (1 admin, 3 teachers, 8 learners)
+- ✅ **26 Users** (1 admin, 7 teachers, 18 learners)
 - ✅ **10 Topics** (Education, Tech, Environment, etc.)
-- ✅ **17 Prompts** (10 speaking + 7 writing)
-- ✅ **4 Classes** (with enrollments)
-- ✅ **8 Learner Profiles** (with goals & bands)
+- ✅ **Prompts** (Speaking + Writing với nhiều độ khó)
+- ✅ **Classes** (với enrollments)
+- ✅ **Learner Profiles** (với goals & bands)
 
 ---
 
 ## 🛠️ Useful Commands
 
 ```bash
-# Re-seed database
+# Re-seed database (xóa và tạo lại data)
 npm run seed
 
-# Build
+# Chỉ chạy migrations
+npm run migration:run
+
+# Revert migration cuối
+npm run migration:revert
+
+# Xem migration status
+npm run migration:show
+
+# Build production
 npm run build
 
-# Run tests
-bash scripts/test-final.sh
+# Dừng database Docker
+docker-compose -f docker-compose.dev.yml down
 
-# Check server logs
-tail -f server.log
+# Xóa hoàn toàn database volume (reset fresh)
+docker-compose -f docker-compose.dev.yml down -v
+```
 
 # Stop server
 pkill -f "node.*dist/server.js"

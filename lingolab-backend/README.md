@@ -29,35 +29,56 @@ Production-ready IELTS Learning Platform backend with TypeScript, PostgreSQL, AI
 - Docker & Docker Compose
 - Git
 
-## ⚡ Quick Start (One Command)
+## ⚡ Quick Start - NGƯỜI MỚI CHỈ CẦN 1 LỆNH
 
 ```bash
-# Clone the repository
+# 1. Clone repository
 git clone <your-repo-url>
 cd lingolab-backend
 
-# Copy environment variables
+# 2. Copy environment file
 cp .env.example .env
 
-# Start with Docker (auto-migrate + auto-seed + run)
+# 3. Install dependencies
+npm install
+
+# 4. CHẠY 1 LỆNH - TỰ ĐỘNG MỌI THỨ!
+npm run dev:full
+```
+
+**Xong!** 🎉 Script tự động:
+1. ✅ Tạo PostgreSQL database trong Docker
+2. ✅ Chạy migrations
+3. ✅ Seed dữ liệu demo (26 users, 10 topics, 17 prompts, 8 classes, ~100 attempts)
+4. ✅ Khởi động AI Model (nếu có)
+5. ✅ Khởi động Backend API
+
+### 🔑 Login Credentials (Password: `Password123!`)
+
+| Role | Email |
+|------|-------|
+| 👑 Admin | admin@lingolab.com |
+| 👨‍🏫 Teacher | teacher.john@lingolab.com |
+| 👨‍🎓 Learner | learner.alice@example.com |
+
+### 🌐 URLs
+
+| Service | URL |
+|---------|-----|
+| **Backend API** | http://localhost:3000 |
+| **API Docs (Swagger)** | http://localhost:3000/docs |
+| **PostgreSQL** | localhost:54321 |
+| **AI Model** | http://localhost:8000 |
+
+---
+
+## 🐳 Chạy Toàn Bộ Trên Docker (Production-like)
+
+```bash
 docker-compose up --build
 ```
 
-**That's it!** 🎉 The backend will be running on **http://localhost:3001**
-
-- Database will be automatically migrated
-- Demo data will be seeded (12 users, 10 topics, 17 prompts, 4 classes)
-- API ready for testing
-
-### What's Running?
-
-| Service | URL | Container |
-|---------|-----|-----------|
-| **Backend API** | http://localhost:3001 | `lingolab_backend` |
-| **API Docs** | http://localhost:3001/api-docs | - |
-| **PostgreSQL** | localhost:5433 | `lingolab_postgres` |
-
-> **Note:** Backend uses port **3001** to avoid conflict with modelIELTS (port 8000)
+Backend sẽ chạy trên **http://localhost:3001**
 
 ## 🔐 Demo Credentials
 

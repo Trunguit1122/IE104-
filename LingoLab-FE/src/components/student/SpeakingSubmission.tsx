@@ -97,7 +97,7 @@ export function SpeakingSubmission({
         {/* Upload Interface */}
         <div className="relative flex flex-col gap-4">
           <div className="text-sm font-medium text-slate-900 mb-1">
-            Or upload an audio file
+            Or upload an audio/video file
           </div>
 
           {!audioFile && !readOnly ? (
@@ -110,11 +110,11 @@ export function SpeakingSubmission({
                   Click to upload
                 </p>
                 <p className="text-xs text-slate-400 mt-1">
-                  MP3, WAV up to 10MB
+                  MP3, WAV, MP4, WebM, OGG, M4A up to 50MB
                 </p>
               </div>
               <input
-                accept="audio/*"
+                accept="audio/*,video/*,.mp3,.wav,.ogg,.m4a,.mp4,.webm,.mov,.avi,.flac,.aac"
                 className="hidden"
                 type="file"
                 onChange={(e) =>
@@ -125,16 +125,17 @@ export function SpeakingSubmission({
           ) : (
             <div className="flex-1 border border-purple-200 bg-purple-50 rounded-lg p-4 flex flex-col items-center justify-center gap-3 min-h-[200px]">
               <FileAudio size={32} className="text-purple-600" />
-              <p className="text-sm font-medium text-slate-900">
+              <p className="text-sm font-medium text-slate-900 text-center px-2 break-all">
                 {audioFile ? audioFile.name : "Submitted Audio"}
               </p>
+              
               {!readOnly && audioFile && (
                 <button
                   type="button"
                   onClick={() => setAudioFile(null)}
-                  className="text-xs text-red-500 hover:underline"
+                  className="text-xs text-red-500 hover:underline mt-2"
                 >
-                  Remove
+                  Remove file
                 </button>
               )}
             </div>
@@ -146,4 +147,3 @@ export function SpeakingSubmission({
 }
 
 export default SpeakingSubmission;
-

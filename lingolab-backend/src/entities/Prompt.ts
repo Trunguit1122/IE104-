@@ -41,7 +41,7 @@ export class Prompt {
   @Column({ type: "uuid" })
   createdBy!: string;
 
-  @Column({ type: "uuid", nullable: true })
+  @Column({ name: "topic_id", type: "uuid", nullable: true })
   topicId?: string;
 
   @Column({

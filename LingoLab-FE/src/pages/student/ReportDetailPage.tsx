@@ -13,11 +13,12 @@ import {
   TrendingUp,
   AlertTriangle,
   Loader2,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BadgeStatus } from "@/components/ui/badge-status";
 import { ROUTES } from "@/constants";
-import { attemptsApi, feedbackApi, scoresApi, attemptMediaApi } from "@/services/api";
+import { attemptsApi, feedbackApi, scoresApi, attemptMediaApi, practiceApi } from "@/services/api";
 import type { Attempt, Feedback, Score } from "@/types";
 
 // Helper to extract sub-score value
@@ -98,6 +99,28 @@ export function ReportDetailPage() {
 
   const handleBack = () => {
     navigate(ROUTES.STUDENT.DASHBOARD);
+  };
+
+  const handleRetake = async () => {
+    if (!submissionId || !attempt) return;
+    
+    try {
+      const result = await practiceApi.retakePractice(submissionId);
+      
+      if (result.success && result.newAttemptId) {
+        // Navigate to the appropriate practice page based on skill type
+        const skillType = attempt.skillType;
+        if (skillType === 'writing') {
+          navigate(`/student/submit/writing/${result.promptId}?attemptId=${result.newAttemptId}`);
+        } else if (skillType === 'speaking') {
+          navigate(`/student/submit/speaking/${result.promptId}?attemptId=${result.newAttemptId}`);
+        }
+      } else {
+        console.error('Retake failed:', result.message);
+      }
+    } catch (error) {
+      console.error('Failed to retake practice:', error);
+    }
   };
 
   if (isLoading) {
@@ -377,6 +400,18 @@ export function ReportDetailPage() {
               </p>
             </div>
           )}
+
+          {/* Retake Button */}
+          <div className="mt-6">
+            <Button
+              onClick={handleRetake}
+              variant="outline"
+              className="w-full sm:w-auto border-purple-600 text-purple-600 hover:bg-purple-50 font-medium gap-2"
+            >
+              <RotateCcw size={16} />
+              Làm lại
+            </Button>
+          </div>
         </div>
       </div>
     </div>

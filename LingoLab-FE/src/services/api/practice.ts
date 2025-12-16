@@ -67,6 +67,12 @@ export const practiceApi = {
     return data;
   },
 
+  // GET /api/practice/speaking/:attemptId/recordings - Get recordings for an attempt
+  getAttemptRecordings: async (attemptId: string): Promise<{ id: string; fileName: string; storageUrl: string }[]> => {
+    const { data } = await apiClient.get(`/practice/speaking/${attemptId}/recordings`);
+    return data;
+  },
+
   // POST /api/practice/writing/start - Start writing practice (Learner)
   startWriting: async (promptId: string): Promise<StartPracticeResponse> => {
     const { data } = await apiClient.post<StartPracticeResponse>("/practice/writing/start", { promptId });
@@ -122,9 +128,9 @@ export const practiceApi = {
     return data;
   },
 
-  // POST /api/practice/retake - Retake prompt (Learner)
-  retakePrompt: async (promptId: string): Promise<StartPracticeResponse> => {
-    const { data } = await apiClient.post<StartPracticeResponse>("/practice/retake", { promptId });
+  // POST /api/practice/retake - Retake practice (Learner) - UC26
+  retakePractice: async (originalAttemptId: string): Promise<{ success: boolean; message?: string; newAttemptId?: string; promptId?: string }> => {
+    const { data } = await apiClient.post<{ success: boolean; message?: string; newAttemptId?: string; promptId?: string }>("/practice/retake", { originalAttemptId });
     return data;
   },
 };

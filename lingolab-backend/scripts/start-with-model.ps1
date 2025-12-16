@@ -217,11 +217,18 @@ if ($ModelRunning -and $ModelHealth -eq "healthy") {
             docker-compose up -d
         } else {
             if ($env:FORCE_MODEL_BUILD) {
-                Write-Host "🛠️  FORCE_MODEL_BUILD=1 -> Rebuilding AI Model image..." -ForegroundColor Yellow
+                Write-Host "🛠️  FORCE_MODEL_BUILD=1 -> Rebuilding AI Model image (no-cache)..." -ForegroundColor Yellow
+                docker-compose build --no-cache
             } else {
                 Write-Host "🛠️  No existing image found, building AI Model (this may take a while)..." -ForegroundColor Yellow
+                docker-compose build
             }
-            docker-compose up -d --build
+            
+            # Clean up dangling images after build to save disk space
+            Write-Host "🧹 Cleaning up old Docker images..." -ForegroundColor Yellow
+            docker image prune -f 2>$null
+            
+            docker-compose up -d
         }
     }
     

@@ -1,6 +1,7 @@
-version: "3.8"
-
 services:
+  # ========================================
+  # PostgreSQL Database
+  # ========================================
   postgres:
     image: postgres:15-alpine
     container_name: lingolab_postgres
@@ -13,12 +14,17 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lingolab_db"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
+  # ========================================
+  # Backend API Server
+  # ========================================
   backend:
     build:
       context: .
@@ -35,16 +41,40 @@ services:
       DB_PASSWORD: postgres
       DB_NAME: lingolab_db
       PORT: 3001
-      # AI Model URL (update if needed)
-      AI_MODEL_URL: http://host.docker.internal:5000
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_REFRESH_SECRET: your-super-secret-refresh-key-change-in-production
+      JWT_ACCESS_EXPIRY: 900
+      JWT_REFRESH_EXPIRY: 604800
+      CORS_ORIGIN: "*"
+      AI_SCORING_URL: http://host.docker.internal:8000
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - ./uploads:/app/uploads
       - ./exports:/app/exports
-    command: sh -c "npm run migration:run && npm run seed && npm start"
+    command: >
+      sh -c "
+        echo '⏳ Waiting for database...' &&
+        sleep 5 &&
+        echo '🔄 Running migrations...' &&
+        npm run migration:run &&
+        echo '🌱 Seeding database...' &&
+        npm run seed &&
+        echo '🚀 Starting server...' &&
+        npm start
+      "
+
+# ========================================
+# Development profile - Database only
+# ========================================
+# Use: docker-compose --profile dev up -d postgres
+# This starts only the database for local development
 
 volumes:
   postgres_data:
     driver: local
+
+networks:
+  default:
+    name: lingolab_network

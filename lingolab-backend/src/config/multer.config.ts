@@ -38,17 +38,34 @@ const imageFilter = (
   }
 };
 
-// File filter for audio
+// File filter for audio/video
 const audioFilter = (
   req: Express.Request,
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ) => {
-  const allowedTypes = ["audio/wav", "audio/mp3", "audio/mpeg", "audio/webm"];
+  const allowedTypes = [
+    // Audio formats
+    "audio/wav",
+    "audio/mp3",
+    "audio/mpeg",
+    "audio/webm",
+    "audio/ogg",
+    "audio/m4a",
+    "audio/x-m4a",
+    "audio/aac",
+    "audio/flac",
+    "audio/x-flac",
+    // Video formats (audio extraction)
+    "video/mp4",
+    "video/webm",
+    "video/quicktime", // .mov
+    "video/x-msvideo", // .avi
+  ];
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Only .wav and .mp3 files are allowed"));
+    cb(new Error("Unsupported file format. Please upload MP3, WAV, MP4, WebM, OGG, M4A, AAC, FLAC, MOV, or AVI files."));
   }
 };
 
@@ -61,20 +78,20 @@ export const avatarUpload = multer({
   },
 });
 
-// Recording upload middleware (max 10MB)
+// Recording upload middleware (max 50MB for video support)
 export const recordingUpload = multer({
   storage: recordingStorage,
   fileFilter: audioFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 50 * 1024 * 1024, // 50MB
   },
 });
 
-// Memory storage for processing (cloud upload)
+// Memory storage for processing (cloud upload, max 50MB)
 export const memoryUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 50 * 1024 * 1024, // 50MB
   },
 });
 

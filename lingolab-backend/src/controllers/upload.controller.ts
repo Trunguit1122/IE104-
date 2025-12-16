@@ -128,10 +128,10 @@ export class UploadController extends Controller {
       return { success: false, message: "No file uploaded" };
     }
 
-    // BR24: Validate file format
+    // BR24: Validate file format (supports multiple audio/video formats)
     if (!isValidAudioFile(file.mimetype)) {
       this.setStatus(400);
-      return { success: false, message: "Invalid audio format. Only .wav and .mp3 are allowed." };
+      return { success: false, message: "Invalid file format. Supported: MP3, WAV, WebM, OGG, M4A, AAC, FLAC, MP4, MOV, AVI." };
     }
 
     // Note: Duration validation should be done client-side or via audio processing

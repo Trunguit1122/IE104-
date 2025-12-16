@@ -1,0 +1,35 @@
+# ========================================
+# LingoLab Development - Database Only
+# ========================================
+# Use this file for local development
+# Command: docker-compose -f docker-compose.dev.yml up -d
+# This starts only PostgreSQL, you run backend locally
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: lingolab_postgres_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lingolab_db
+    ports:
+      - "54321:5432"  # Maps to port 54321 to avoid conflicts
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lingolab_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  postgres_dev_data:
+    driver: local
+
+networks:
+  default:
+    name: lingolab_dev_network

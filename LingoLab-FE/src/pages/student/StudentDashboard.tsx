@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { CheckCircle, MessageSquare, Lightbulb, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/stores";
 import { TaskCard, FeedbackSidebar } from "@/components/student";
-import { attemptsApi, scoresApi, promptsApi, attemptMediaApi } from "@/services/api";
+import { attemptsApi, scoresApi, promptsApi, attemptMediaApi, practiceApi } from "@/services/api";
 import type { Attempt, Prompt, AverageBandStats } from "@/types";
 
 // Types
@@ -175,6 +175,35 @@ export function StudentDashboard() {
       } else if (task.type === "SPEAKING") {
         navigate(`/student/submit/speaking/${taskId}`);
       }
+    }
+  };
+
+  // Handler for retaking a practice
+  const handleRetake = async () => {
+    if (!selectedAttempt?.id) return;
+    
+    try {
+      const result = await practiceApi.retakePractice(selectedAttempt.id);
+      
+      if (result.success && result.newAttemptId) {
+        // Close the sidebar
+        setSelectedSubmissionId(null);
+        setSelectedScore(null);
+        setSelectedAudioUrl(undefined);
+        
+        // Navigate to the appropriate practice page based on skill type
+        const skillType = selectedAttempt.skillType;
+        if (skillType === 'writing') {
+          navigate(`/student/submit/writing/${result.promptId}?attemptId=${result.newAttemptId}`);
+        } else if (skillType === 'speaking') {
+          navigate(`/student/submit/speaking/${result.promptId}?attemptId=${result.newAttemptId}`);
+        }
+      } else {
+        console.error('Retake failed:', result.message);
+      }
+    } catch (error) {
+      console.error('Failed to retake practice:', error);
+      // Could show a toast notification here
     }
   };
 
@@ -405,6 +434,7 @@ export function StudentDashboard() {
           feedback: selectedScore.feedback,
           detailedFeedback: selectedScore.detailedFeedback,
         } : undefined}
+        onRetake={handleRetake}
       />
     </div>
   );

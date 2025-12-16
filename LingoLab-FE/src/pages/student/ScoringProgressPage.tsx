@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/constants";
-import { attemptsApi, scoresApi } from "@/services/api";
+import { attemptsApi } from "@/services/api";
 import { Loader2, CheckCircle, AlertCircle, ArrowRight, Clock } from "lucide-react";
 import type { Attempt } from "@/types";
 

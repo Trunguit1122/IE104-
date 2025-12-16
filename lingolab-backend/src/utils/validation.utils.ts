@@ -115,8 +115,29 @@ export function isValidAudioDuration(durationSeconds: number): boolean {
 
 /**
  * BR24: Audio File Format Validation
+ * Supports: MP3, WAV, WebM, OGG, M4A, AAC, FLAC, MP4, MOV, AVI
  */
-const ALLOWED_AUDIO_TYPES = ["audio/wav", "audio/mp3", "audio/mpeg", "audio/webm"];
+const ALLOWED_AUDIO_TYPES = [
+  // Audio formats
+  "audio/wav",
+  "audio/x-wav",
+  "audio/mp3",
+  "audio/mpeg",
+  "audio/webm",
+  "audio/ogg",
+  "audio/m4a",
+  "audio/x-m4a",
+  "audio/mp4",
+  "audio/aac",
+  "audio/flac",
+  "audio/x-flac",
+  // Video formats (audio extraction)
+  "video/mp4",
+  "video/webm",
+  "video/quicktime", // .mov
+  "video/x-msvideo", // .avi
+  "video/ogg",
+];
 
 export function isValidAudioFile(mimeType: string): boolean {
   return ALLOWED_AUDIO_TYPES.includes(mimeType.toLowerCase());

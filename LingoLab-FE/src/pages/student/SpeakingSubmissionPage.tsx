@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   ArrowLeft,
@@ -11,49 +11,15 @@ import {
   Volume2,
   Play,
   Pause,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BadgeStatus } from "@/components/ui/badge-status";
 import { SpeakingSubmission } from "@/components/student/SpeakingSubmission";
 import { ROUTES } from "@/constants";
-
-// Types
-interface Assignment {
-  id: string;
-  title: string;
-  className: string;
-  type: "WRITING" | "SPEAKING";
-  dueDate: string;
-  description: string;
-  prompt: string;
-  speakingTime?: number; // in seconds
-  tips: string[];
-}
-
-// Mock data
-const mockAssignment: Assignment = {
-  id: "a2",
-  title: "IELTS Speaking Part 2 - Describe a Place",
-  className: "IELTS Speaking",
-  type: "SPEAKING",
-  dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-  description:
-    "In this task, you will be given a topic card and asked to speak about a particular subject for 1-2 minutes.",
-  prompt: `Describe a place you have visited that left a strong impression on you.
-
-You should say:
-• Where this place is
-• When you visited it
-• What you did there
-• And explain why it left a strong impression on you`,
-  speakingTime: 120,
-  tips: [
-    "Speak clearly and at a natural pace",
-    "Use a variety of vocabulary and expressions",
-    "Structure your response with an introduction, main points, and conclusion",
-    "Don't worry about minor mistakes - fluency is important",
-  ],
-};
+import { promptsApi, practiceApi, uploadApi } from "@/services/api";
+import type { Prompt, Attempt } from "@/types";
+import { toast } from "sonner";
 
 export function SpeakingSubmissionPage() {
   const navigate = useNavigate();
@@ -65,16 +31,75 @@ export function SpeakingSubmissionPage() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Audio playback state
   const [isPlaying, setIsPlaying] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const assignment = mockAssignment;
-  const maxRecordingTime = assignment.speakingTime || 120;
+  // API data
+  const [prompt, setPrompt] = useState<Prompt | null>(null);
+  const [attempt, setAttempt] = useState<Attempt | null>(null);
+  const [mediaId, setMediaId] = useState<string | null>(null);
+
+  const maxRecordingTime = prompt?.responseTime || 120;
+
+  // Create audio URL when file changes
+  useEffect(() => {
+    if (audioFile) {
+      const url = URL.createObjectURL(audioFile);
+      setAudioUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setAudioUrl(null);
+      setAudioDuration(0);
+    }
+  }, [audioFile]);
+
+  // Fetch prompt from API
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!assignmentId) return;
+      
+      setIsLoading(true);
+      try {
+        // Fetch the prompt
+        const promptData = await promptsApi.getById(assignmentId);
+        setPrompt(promptData);
+
+        // Start a speaking practice session
+        try {
+          const session = await practiceApi.startSpeaking(assignmentId);
+          if (session.success && session.attemptId) {
+            // Create attempt object from response
+            setAttempt({
+              id: session.attemptId,
+              promptId: session.promptId,
+              skillType: session.skillType,
+              status: 'in_progress',
+              startedAt: session.startedAt,
+            } as Attempt);
+          }
+        } catch {
+          // Session might already exist, that's okay
+          toast.info("Phiên luyện tập đã được khởi tạo trước đó");
+        }
+      } catch (error) {
+        console.error("Error fetching prompt:", error);
+        toast.error("Không thể tải đề bài");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [assignmentId]);
 
   // Recording timer effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isRecording) {
       interval = setInterval(() => {
         setRecordingTime((prev) => {
@@ -112,9 +137,22 @@ export function SpeakingSubmissionPage() {
     navigate(ROUTES.STUDENT.DASHBOARD);
   };
 
-  const handleSaveDraft = () => {
-    // Simulate saving draft
-    console.log("Draft saved");
+  const handleSaveDraft = async () => {
+    if (!attempt || !audioFile) {
+      toast.info("Chưa có file audio để lưu");
+      return;
+    }
+    
+    try {
+      // Upload audio file
+      const uploadResponse = await uploadApi.uploadRecording(attempt.id, audioFile);
+      if (uploadResponse.success) {
+        toast.success("Đã lưu bản ghi âm");
+      }
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      toast.error("Không thể lưu bản nháp");
+    }
   };
 
   const handleSubmit = async () => {
@@ -126,20 +164,111 @@ export function SpeakingSubmissionPage() {
   };
 
   const submitWork = async () => {
+    if (!attempt) {
+      toast.error("Không tìm thấy phiên luyện tập");
+      return;
+    }
+
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setShowConfirmDialog(false);
-    navigate(ROUTES.STUDENT.DASHBOARD);
+    try {
+      // Step 1: Upload audio file if exists
+      let uploadedMediaId = mediaId;
+      if (audioFile && !uploadedMediaId) {
+        const uploadResponse = await uploadApi.uploadRecording(attempt.id, audioFile);
+        if (uploadResponse.success) {
+          // Get the mediaId from the recordings
+          const recordings = await practiceApi.getAttemptRecordings(attempt.id);
+          if (recordings.length > 0) {
+            uploadedMediaId = recordings[recordings.length - 1].id;
+          }
+        }
+      }
+
+      if (!uploadedMediaId) {
+        // If no uploaded media, get existing recordings
+        const recordings = await practiceApi.getAttemptRecordings(attempt.id);
+        if (recordings.length > 0) {
+          uploadedMediaId = recordings[recordings.length - 1].id;
+        }
+      }
+
+      if (!uploadedMediaId) {
+        toast.error("Vui lòng tải lên hoặc ghi âm trước khi nộp bài");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Step 2: Submit the attempt
+      const submitResponse = await practiceApi.submitSpeaking(attempt.id, { 
+        selectedRecordingId: uploadedMediaId 
+      });
+
+      if (submitResponse.success) {
+        toast.success("Đã nộp bài thành công! Đang chuyển đến trang chấm điểm...");
+        // Navigate to scoring progress page
+        navigate(`/student/scoring/${submitResponse.attemptId}?type=speaking`);
+      } else {
+        toast.error(submitResponse.message || "Không thể nộp bài");
+      }
+    } catch (error: any) {
+      console.error("Error submitting:", error);
+      toast.error(error?.response?.data?.message || "Không thể nộp bài");
+    } finally {
+      setIsSubmitting(false);
+      setShowConfirmDialog(false);
+    }
   };
 
   const getDaysUntilDue = () => {
-    const dueDate = new Date(assignment.dueDate);
-    const now = new Date();
-    return Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+    // Mock deadline since prompts don't have due dates
+    return 7;
   };
 
   const hasRecording = recordingTime > 0 || audioFile !== null;
+
+  // Handle audio file upload
+  const handleSetAudioFile = async (file: File | null) => {
+    setAudioFile(file);
+    
+    // Auto upload when file is selected
+    if (file && attempt) {
+      try {
+        const uploadResponse = await uploadApi.uploadRecording(attempt.id, file);
+        if (uploadResponse.success) {
+          // Get the mediaId from the recordings
+          const recordings = await practiceApi.getAttemptRecordings(attempt.id);
+          if (recordings.length > 0) {
+            setMediaId(recordings[recordings.length - 1].id);
+            toast.success("Đã tải lên file audio");
+          }
+        }
+      } catch (error) {
+        console.error("Error uploading audio:", error);
+        toast.error("Không thể tải lên file audio");
+      }
+    } else if (!file) {
+      setMediaId(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+      </div>
+    );
+  }
+
+  if (!prompt) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-slate-500">Không tìm thấy đề bài</p>
+        <Button type="button" onClick={handleBack} className="mt-4">
+          Quay lại
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto pb-12 animate-in fade-in duration-300">
@@ -159,10 +288,10 @@ export function SpeakingSubmissionPage() {
               <span className="bg-purple-100 text-purple-600 p-1 rounded">
                 <Mic size={16} />
               </span>
-              <p className="text-sm text-slate-500">{assignment.className}</p>
+              <p className="text-sm text-slate-500">{prompt.topic?.name || "IELTS Speaking"}</p>
             </div>
             <h1 className="text-2xl font-bold text-slate-900">
-              {assignment.title}
+              Speaking Task - {prompt.difficulty?.toUpperCase()}
             </h1>
             <div className="flex items-center gap-3 mt-2">
               <BadgeStatus variant="info">Speaking Task</BadgeStatus>
@@ -215,7 +344,7 @@ export function SpeakingSubmissionPage() {
             </div>
             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
               <p className="whitespace-pre-line leading-relaxed">
-                {assignment.prompt}
+                {prompt.content}
               </p>
             </div>
           </div>
@@ -226,36 +355,63 @@ export function SpeakingSubmissionPage() {
             toggleRecording={toggleRecording}
             recordingTime={recordingTime}
             audioFile={audioFile}
-            setAudioFile={setAudioFile}
+            setAudioFile={handleSetAudioFile}
             readOnly={false}
             formatTime={formatTime}
           />
 
           {/* Recording Status */}
           {hasRecording && (
-            <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <Mic size={20} className="text-green-600" />
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              {/* Hidden audio element */}
+              {audioUrl && (
+                <audio
+                  ref={audioRef}
+                  src={audioUrl}
+                  onLoadedMetadata={() => {
+                    if (audioRef.current) {
+                      setAudioDuration(audioRef.current.duration);
+                    }
+                  }}
+                  onEnded={() => setIsPlaying(false)}
+                />
+              )}
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <Mic size={20} className="text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">
+                      {audioFile ? "Audio file uploaded" : "Recording complete"}
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      Duration: {audioDuration > 0 ? formatTime(Math.floor(audioDuration)) : formatTime(recordingTime)}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-slate-900">
-                    {audioFile ? "Audio file uploaded" : "Recording complete"}
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    Duration: {formatTime(recordingTime)}
-                  </p>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => {
+                    if (!audioRef.current || !audioUrl) return;
+                    
+                    if (isPlaying) {
+                      audioRef.current.pause();
+                      setIsPlaying(false);
+                    } else {
+                      audioRef.current.play();
+                      setIsPlaying(true);
+                    }
+                  }}
+                  disabled={!audioUrl}
+                >
+                  {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+                  {isPlaying ? "Pause" : "Preview"}
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setIsPlaying(!isPlaying)}
-              >
-                {isPlaying ? <Pause size={16} /> : <Play size={16} />}
-                {isPlaying ? "Pause" : "Preview"}
-              </Button>
             </div>
           )}
         </div>
@@ -269,7 +425,7 @@ export function SpeakingSubmissionPage() {
               Task Description
             </h3>
             <p className="text-slate-600 text-sm leading-relaxed">
-              {assignment.description}
+              {prompt.description || "Speak clearly and naturally. Structure your response with an introduction, main points, and conclusion."}
             </p>
           </div>
 
@@ -281,7 +437,7 @@ export function SpeakingSubmissionPage() {
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
               <span className="text-sm text-slate-600">Max Speaking Time</span>
               <span className="font-bold text-slate-900">
-                {formatTime(assignment.speakingTime || 120)}
+                {formatTime(prompt.responseTime || 120)}
               </span>
             </div>
           </div>
@@ -292,12 +448,22 @@ export function SpeakingSubmissionPage() {
               💡 Speaking Tips
             </h3>
             <ul className="space-y-2 text-sm text-slate-600">
-              {assignment.tips.map((tip, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="text-purple-600">•</span>
-                  {tip}
-                </li>
-              ))}
+              <li className="flex items-start gap-2">
+                <span className="text-purple-600">•</span>
+                Speak clearly and at a natural pace
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-purple-600">•</span>
+                Use a variety of vocabulary and expressions
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-purple-600">•</span>
+                Structure your response with an introduction, main points, and conclusion
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-purple-600">•</span>
+                Don't worry about minor mistakes - fluency is important
+              </li>
             </ul>
           </div>
         </div>

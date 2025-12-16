@@ -11,6 +11,7 @@ import {
   ArrowRight,
   ChevronDown,
   ChevronUp,
+  RotateCcw,
 } from "lucide-react";
 import { BadgeStatus } from "@/components/ui/badge-status";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ interface FeedbackSidebarProps {
   writingContent?: string;
   audioUrl?: string;
   aiFeedback?: AIFeedback;
+  onRetake?: () => void;
 }
 
 export function FeedbackSidebar({
@@ -57,6 +59,7 @@ export function FeedbackSidebar({
   writingContent,
   audioUrl,
   aiFeedback,
+  onRetake,
 }: FeedbackSidebarProps) {
   const navigate = useNavigate();
   const [showSubmission, setShowSubmission] = useState(false);
@@ -307,6 +310,18 @@ export function FeedbackSidebar({
                 Xem báo cáo đầy đủ
                 <ArrowRight size={16} />
               </Button>
+
+              {/* Retake Button */}
+              {onRetake && (
+                <Button
+                  onClick={onRetake}
+                  variant='outline'
+                  className='w-full border-purple-600 text-purple-600 hover:bg-purple-50 font-medium gap-2 mt-3'
+                >
+                  <RotateCcw size={16} />
+                  Làm lại
+                </Button>
+              )}
             </div>
           )}
         </div>
