@@ -6,10 +6,10 @@
   "scripts": {
     "build": "tsoa spec-and-routes && tsc",
     "dev": "tsoa spec-and-routes && ts-node src/server.ts",
-    "dev:full": "bash scripts/start-with-model.sh",
+    "dev:full": "node scripts/start-full.js",
     "dev:watch": "concurrently \"tsoa spec-and-routes -w\" \"nodemon\"",
     "start": "node dist/server.js",
-    "start:full": "bash scripts/start-with-model.sh",
+    "start:full": "node scripts/start-full.js",
     "swagger": "tsoa spec-and-routes",
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/data-source.ts",
